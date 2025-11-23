@@ -6,7 +6,7 @@
   </a>
   <br />
   <figure>
-    <img src="https://github.com/nicotsx/zerobyte/blob/main/screenshots/backup-details.png?raw=true" alt="Demo" />
+    <img src="https://github.com/nicotsx/zerobyte/blob/main/screenshots/backup-details.webp?raw=true" alt="Demo" />
     <figcaption>
       <p align="center">
         Backup management with scheduling and monitoring

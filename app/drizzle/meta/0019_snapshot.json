@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b5b3acff-51d7-45ae-b9d2-4b07a6286fc3",
-  "prevId": "d5a60aea-4490-423e-8725-6ace87a76c9b",
+  "id": "dedfb246-68e7-4590-af52-6476eb2999d1",
+  "prevId": "121ef03c-eb5a-4b97-b2f1-4add6adfb080",
   "tables": {
     "app_metadata": {
       "name": "app_metadata",
@@ -249,13 +249,6 @@
           "notNull": true,
           "autoincrement": true
         },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "volume_id": {
           "name": "volume_id",
           "type": "integer",
@@ -353,15 +346,7 @@
           "default": "(unixepoch() * 1000)"
         }
       },
-      "indexes": {
-        "backup_schedules_table_name_unique": {
-          "name": "backup_schedules_table_name_unique",
-          "columns": [
-            "name"
-          ],
-          "isUnique": true
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "backup_schedules_table_volume_id_volumes_table_id_fk": {
           "name": "backup_schedules_table_volume_id_volumes_table_id_fk",

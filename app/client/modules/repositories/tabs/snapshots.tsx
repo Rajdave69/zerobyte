@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Database } from "lucide-react";
+import { Database, X } from "lucide-react";
 import { useState } from "react";
 import { listSnapshotsOptions } from "~/client/api-client/@tanstack/react-query.gen";
 import { SnapshotsTable } from "~/client/components/snapshots-table";
@@ -124,6 +124,7 @@ export const RepositorySnapshotsTabContent = ({ repository }: Props) => {
 								<div className="flex flex-col items-center gap-3">
 									<p className="text-muted-foreground">No snapshots match your search.</p>
 									<Button onClick={() => setSearchQuery("")} variant="outline" size="sm">
+										<X className="h-4 w-4 mr-2" />
 										Clear search
 									</Button>
 								</div>

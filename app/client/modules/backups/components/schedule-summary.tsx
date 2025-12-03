@@ -1,4 +1,4 @@
-import { Eraser, Pencil, Play, Square, Trash2 } from "lucide-react";
+import { Check, Eraser, Pencil, Play, Square, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { OnOff } from "~/client/components/onoff";
 import { Button } from "~/client/components/ui/button";
@@ -199,11 +199,15 @@ export const ScheduleSummary = (props: Props) => {
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<div className="flex gap-3 justify-end">
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogCancel>
+							<X className="h-4 w-4 mr-2" />
+							Cancel
+						</AlertDialogCancel>
 						<AlertDialogAction
 							onClick={handleConfirmDelete}
 							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 						>
+							<Trash2 className="h-4 w-4 mr-2" />
 							Delete schedule
 						</AlertDialogAction>
 					</div>
@@ -220,8 +224,14 @@ export const ScheduleSummary = (props: Props) => {
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<div className="flex gap-3 justify-end">
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction onClick={handleConfirmForget}>Run cleanup</AlertDialogAction>
+						<AlertDialogCancel>
+							<X className="h-4 w-4 mr-2" />
+							Cancel
+						</AlertDialogCancel>
+						<AlertDialogAction onClick={handleConfirmForget}>
+							<Check className="h-4 w-4 mr-2" />
+							Run cleanup
+						</AlertDialogAction>
 					</div>
 				</AlertDialogContent>
 			</AlertDialog>

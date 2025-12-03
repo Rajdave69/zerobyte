@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { useState } from "react";
+import { CircleStop, Play, Trash2, X } from "lucide-react";
 import { StatusDot } from "~/client/components/status-dot";
 import { Button } from "~/client/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/client/components/ui/tabs";
@@ -148,6 +149,7 @@ export default function VolumeDetails({ loaderData }: Route.ComponentProps) {
 						loading={mountVol.isPending}
 						className={cn({ hidden: volume.status === "mounted" })}
 					>
+						<Play className="h-4 w-4 mr-2" />
 						Mount
 					</Button>
 					<Button
@@ -156,9 +158,11 @@ export default function VolumeDetails({ loaderData }: Route.ComponentProps) {
 						loading={unmountVol.isPending}
 						className={cn({ hidden: volume.status !== "mounted" })}
 					>
+						<CircleStop className="h-4 w-4 mr-2" />
 						Unmount
 					</Button>
 					<Button variant="destructive" onClick={() => setShowDeleteConfirm(true)} disabled={deleteVol.isPending}>
+						<Trash2 className="h-4 w-4 mr-2" />
 						Delete
 					</Button>
 				</div>
@@ -200,11 +204,15 @@ export default function VolumeDetails({ loaderData }: Route.ComponentProps) {
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<div className="flex gap-3 justify-end">
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogCancel>
+							<X className="h-4 w-4 mr-2" />
+							Cancel
+						</AlertDialogCancel>
 						<AlertDialogAction
 							onClick={handleConfirmDelete}
 							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 						>
+							<Trash2 className="h-4 w-4 mr-2" />
 							Delete volume
 						</AlertDialogAction>
 					</div>

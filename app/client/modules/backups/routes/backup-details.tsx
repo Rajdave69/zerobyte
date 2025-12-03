@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { redirect, useNavigate } from "react-router";
 import { toast } from "sonner";
+import { Save, Trash2, X } from "lucide-react";
 import { Button } from "~/client/components/ui/button";
 import {
 	AlertDialog,
@@ -201,9 +202,11 @@ export default function ScheduleDetailsPage({ params, loaderData }: Route.Compon
 				<CreateScheduleForm volume={schedule.volume} initialValues={schedule} onSubmit={handleSubmit} formId={formId} />
 				<div className="flex justify-end mt-4 gap-2">
 					<Button type="submit" className="ml-auto" variant="primary" form={formId} loading={updateSchedule.isPending}>
+						<Save className="h-4 w-4 mr-2" />
 						Update schedule
 					</Button>
 					<Button variant="outline" onClick={() => setIsEditMode(false)}>
+						<X className="h-4 w-4 mr-2" />
 						Cancel
 					</Button>
 				</div>
@@ -254,12 +257,16 @@ export default function ScheduleDetailsPage({ params, loaderData }: Route.Compon
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogCancel>
+							<X className="h-4 w-4 mr-2" />
+							Cancel
+						</AlertDialogCancel>
 						<AlertDialogAction
 							onClick={handleConfirmDelete}
 							disabled={deleteSnapshot.isPending}
 							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 						>
+							<Trash2 className="h-4 w-4 mr-2" />
 							Delete snapshot
 						</AlertDialogAction>
 					</AlertDialogFooter>

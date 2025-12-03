@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { Check, X } from "lucide-react";
 import { CreateVolumeForm, type FormValues } from "~/client/components/create-volume-form";
 import {
 	AlertDialog,
@@ -93,8 +94,14 @@ export const VolumeInfoTabContent = ({ volume, statfs }: Props) => {
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction onClick={confirmUpdate}>Update</AlertDialogAction>
+						<AlertDialogCancel>
+							<X className="h-4 w-4 mr-2" />
+							Cancel
+						</AlertDialogCancel>
+						<AlertDialogAction onClick={confirmUpdate}>
+							<Check className="h-4 w-4 mr-2" />
+							Update
+						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

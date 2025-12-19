@@ -9,8 +9,10 @@ services:
       # Optional: Some hosts require this for kernel-mode Tailscale.
       # If it causes issues (common on Docker Desktop), keep it disabled.
       # - SYS_MODULE
-    # Kernel-mode Tailscale needs /dev/net/tun. If you enable userspace mode
-    # (TS_USERSPACE=true), remove this device mapping.
+    # Kernel-mode Tailscale (TS_USERSPACE=false) requires /dev/net/tun.
+    # If you switch to userspace mode (TS_USERSPACE=true), you MUST remove this
+    # devices section (or at least this mapping), otherwise the container may
+    # fail to start or hit runtime errors on some hosts.
     devices:
       - /dev/net/tun:/dev/net/tun
     environment:

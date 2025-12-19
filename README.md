@@ -57,7 +57,7 @@ services:
 ```
 
 > [!WARNING]
-> It is highly discouraged to run Zerobyte on a server that is accessible from the internet (VPS or home server with port forwarding) If you do, make sure to change the port mapping to "127.0.0.1:4096:4096" and use a secure tunnel (SSH tunnel, Cloudflare Tunnel, etc.) to access the web interface remotely
+> It is highly discouraged to run Zerobyte on a server that is accessible from the internet (VPS or home server with port forwarding) If you do, make sure to change the port mapping to "127.0.0.1:4096:4096" and use a secure tunnel (SSH tunnel, Cloudflare Tunnel, etc.) with authentication.
 
 > [!WARNING]
 > Do not try to point `/var/lib/zerobyte` on a network share. You will face permission issues and strong performance degradation.

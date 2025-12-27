@@ -10,7 +10,7 @@ import { logger } from "./logger";
 import { cryptoUtils } from "./crypto";
 import type { RetentionPolicy } from "../modules/backups/backups.dto";
 import { safeSpawn } from "./spawn";
-import type { CompressionMode, RepositoryConfig, OverwriteMode } from "~/schemas/restic";
+import type { CompressionMode, RepositoryConfig, OverwriteMode, BandwidthLimit } from "~/schemas/restic";
 import { ResticError } from "./errors";
 
 const backupOutputSchema = type({
@@ -213,7 +213,7 @@ const init = async (config: RepositoryConfig) => {
 	const env = await buildEnv(config);
 
 	const args = ["init", "--repo", repoUrl];
-	addCommonArgs(args, env);
+	addCommonArgs(args, env, config);
 
 	const res = await safeSpawn({ command: "restic", args, env });
 	await cleanupTemporaryKeys(config, env);
@@ -305,7 +305,7 @@ const backup = async (
 		}
 	}
 
-	addCommonArgs(args, env);
+	addCommonArgs(args, env, config);
 
 	const logData = throttle((data: string) => {
 		logger.info(data.trim());
@@ -437,7 +437,7 @@ const restore = async (
 		}
 	}
 
-	addCommonArgs(args, env);
+	addCommonArgs(args, env, config);
 
 	logger.debug(`Executing: restic ${args.join(" ")}`);
 	const res = await safeSpawn({ command: "restic", args, env });
@@ -500,7 +500,7 @@ const snapshots = async (config: RepositoryConfig, options: { tags?: string[] } 
 		}
 	}
 
-	addCommonArgs(args, env);
+	addCommonArgs(args, env, config);
 
 	const res = await safeSpawn({ command: "restic", args, env });
 	await cleanupTemporaryKeys(config, env);
@@ -549,7 +549,7 @@ const forget = async (config: RepositoryConfig, options: RetentionPolicy, extra:
 	}
 
 	args.push("--prune");
-	addCommonArgs(args, env);
+	addCommonArgs(args, env, config);
 
 	const res = await safeSpawn({ command: "restic", args, env });
 	await cleanupTemporaryKeys(config, env);
@@ -567,7 +567,7 @@ const deleteSnapshot = async (config: RepositoryConfig, snapshotId: string) => {
 	const env = await buildEnv(config);
 
 	const args: string[] = ["--repo", repoUrl, "forget", snapshotId, "--prune"];
-	addCommonArgs(args, env);
+	addCommonArgs(args, env, config);
 
 	const res = await safeSpawn({ command: "restic", args, env });
 	await cleanupTemporaryKeys(config, env);
@@ -617,7 +617,7 @@ const ls = async (config: RepositoryConfig, snapshotId: string, path?: string) =
 		args.push(path);
 	}
 
-	addCommonArgs(args, env);
+	addCommonArgs(args, env, config);
 
 	const res = await safeSpawn({ command: "restic", args, env });
 	await cleanupTemporaryKeys(config, env);
@@ -668,7 +668,7 @@ const unlock = async (config: RepositoryConfig) => {
 	const env = await buildEnv(config);
 
 	const args = ["unlock", "--repo", repoUrl, "--remove-all"];
-	addCommonArgs(args, env);
+	addCommonArgs(args, env, config);
 
 	const res = await safeSpawn({ command: "restic", args, env });
 	await cleanupTemporaryKeys(config, env);
@@ -692,7 +692,7 @@ const check = async (config: RepositoryConfig, options?: { readData?: boolean })
 		args.push("--read-data");
 	}
 
-	addCommonArgs(args, env);
+	addCommonArgs(args, env, config);
 
 	const res = await safeSpawn({ command: "restic", args, env });
 	await cleanupTemporaryKeys(config, env);
@@ -725,7 +725,7 @@ const repairIndex = async (config: RepositoryConfig) => {
 	const env = await buildEnv(config);
 
 	const args = ["repair", "index", "--repo", repoUrl];
-	addCommonArgs(args, env);
+	addCommonArgs(args, env, config);
 
 	const res = await safeSpawn({ command: "restic", args, env });
 	await cleanupTemporaryKeys(config, env);
@@ -777,7 +777,7 @@ const copy = async (
 		args.push("latest");
 	}
 
-	addCommonArgs(args, env);
+	addCommonArgs(args, env, destConfig);
 
 	if (sourceConfig.backend === "sftp" && sourceEnv._SFTP_SSH_ARGS) {
 		args.push("-o", `sftp.args=${sourceEnv._SFTP_SSH_ARGS}`);
@@ -815,11 +815,63 @@ const cleanupTemporaryKeys = async (config: RepositoryConfig, env: Record<string
 	}
 };
 
-const addCommonArgs = (args: string[], env: Record<string, string>) => {
+const buildRcloneArgs = (config: RepositoryConfig): string | null => {
+	if (config.backend !== "rclone") {
+		return null;
+	}
+
+	const rcloneArgs: string[] = [];
+
+	// Add transfers option
+	if (config.transfers !== undefined) {
+		rcloneArgs.push(`--transfers=${config.transfers}`);
+	}
+
+	// Add checkers option
+	if (config.checkers !== undefined) {
+		rcloneArgs.push(`--checkers=${config.checkers}`);
+	}
+
+	// Add fast-list option
+	if (config.fastList === true) {
+		rcloneArgs.push("--fast-list");
+	}
+
+	// Build bandwidth limit string
+	const formatBwLimit = (limit: BandwidthLimit | undefined): string | null => {
+		if (!limit?.enabled) {
+			return null;
+		}
+		return `${limit.value}${limit.unit}`;
+	};
+
+	const uploadLimit = formatBwLimit(config.bwlimitUpload);
+	const downloadLimit = formatBwLimit(config.bwlimitDownload);
+
+	if (uploadLimit && downloadLimit) {
+		rcloneArgs.push(`--bwlimit=${uploadLimit}:${downloadLimit}`);
+	} else if (uploadLimit) {
+		rcloneArgs.push(`--bwlimit=${uploadLimit}:off`);
+	} else if (downloadLimit) {
+		rcloneArgs.push(`--bwlimit=off:${downloadLimit}`);
+	}
+
+	return rcloneArgs.length > 0 ? rcloneArgs.join(" ") : null;
+};
+
+const addCommonArgs = (args: string[], env: Record<string, string>, config?: RepositoryConfig) => {
 	args.push("--json");
 
 	if (env._SFTP_SSH_ARGS) {
 		args.push("-o", `sftp.args=${env._SFTP_SSH_ARGS}`);
+	}
+
+	// Add rclone-specific options
+	if (config) {
+		const rcloneArgs = buildRcloneArgs(config);
+		if (rcloneArgs) {
+			args.push("-o", `rclone.args=${rcloneArgs}`);
+		}
 	}
 };
 

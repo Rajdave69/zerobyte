@@ -856,6 +856,27 @@ const buildRcloneArgs = (config: RepositoryConfig): string | null => {
 		rcloneArgs.push(`--bwlimit=off:${downloadLimit}`);
 	}
 
+	// Add additional arguments from config
+	if (config.additionalArgs) {
+		const normalizeArgs = (input: string | string[]): string[] => {
+			if (Array.isArray(input)) {
+				// Flatten array, split each entry on whitespace/newlines, trim and filter empty
+				return input
+					.flatMap((arg) => arg.split(/[\s\n]+/))
+					.map((arg) => arg.trim())
+					.filter((arg) => arg.length > 0);
+			}
+			// Split string on whitespace or newlines, trim and filter empty
+			return input
+				.split(/[\s\n]+/)
+				.map((arg) => arg.trim())
+				.filter((arg) => arg.length > 0);
+		};
+
+		const additionalArgs = normalizeArgs(config.additionalArgs);
+		rcloneArgs.push(...additionalArgs);
+	}
+
 	return rcloneArgs.length > 0 ? rcloneArgs.join(" ") : null;
 };
 

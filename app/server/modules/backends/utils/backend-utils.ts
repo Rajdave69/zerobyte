@@ -16,13 +16,13 @@ export const executeMount = async (args: string[]): Promise<void> => {
 	const stderr = result.stderr.toString().trim();
 
 	if (result.exitCode === 0) {
-		logger.debug(stdout);
-		logger.debug(stderr);
+		if (stdout) logger.debug(stdout);
+		if (stderr) logger.debug(stderr);
 		return;
 	}
 
-	logger.warn(stdout);
-	logger.warn(stderr);
+	if (stdout) logger.warn(stdout);
+	if (stderr) logger.warn(stderr);
 
 	throw new Error(`Mount command failed with exit code ${result.exitCode}: ${stderr || stdout || "unknown error"}`);
 };

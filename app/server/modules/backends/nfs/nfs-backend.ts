@@ -34,9 +34,7 @@ const mount = async (config: BackendConfig, path: string) => {
 	}
 
 	if (status === "error") {
-		logger.debug(
-			`Trying to unmount any existing mounts at ${path} before mounting...`,
-		);
+		logger.debug(`Trying to unmount any existing mounts at ${path} before mounting...`);
 		await unmount(path);
 	}
 
@@ -57,6 +55,9 @@ const mount = async (config: BackendConfig, path: string) => {
 		logger.info(`Executing mount: mount ${args.join(" ")}`);
 
 		await executeMount(args);
+
+		// Fallback with -i flag if the first mount fails using the mount helper
+		await executeMount(["-i", ...args]);
 
 		logger.info(`NFS volume at ${path} mounted successfully.`);
 		return { status: BACKEND_STATUS.mounted };
@@ -120,9 +121,7 @@ const checkHealth = async (path: string) => {
 		}
 
 		if (!mount.fstype.startsWith("nfs")) {
-			throw new Error(
-				`Path ${path} is not mounted as NFS (found ${mount.fstype}).`,
-			);
+			throw new Error(`Path ${path} is not mounted as NFS (found ${mount.fstype}).`);
 		}
 
 		logger.debug(`NFS volume at ${path} is healthy and mounted.`);
@@ -140,10 +139,7 @@ const checkHealth = async (path: string) => {
 	}
 };
 
-export const makeNfsBackend = (
-	config: BackendConfig,
-	path: string,
-): VolumeBackend => ({
+export const makeNfsBackend = (config: BackendConfig, path: string): VolumeBackend => ({
 	mount: () => mount(config, path),
 	unmount: () => unmount(path),
 	checkHealth: () => checkHealth(path),

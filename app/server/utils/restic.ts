@@ -851,31 +851,31 @@ const copy = async (
 	addCommonArgs(args, env, destConfig);
 
 	// Then explicitly apply source-side bandwidth limits for the from-repo operation
-	if (sourceConfig.uploadLimit?.enabled) {
-		const sourceUploadLimit = formatBandwidthLimit(sourceConfig.uploadLimit);
-		if (sourceUploadLimit) {
-			if (sourceConfig.backend === "rclone") {
-				// For rclone source backends, use rclone.bwlimit for the from-repo
-				args.push("-o", `rclone.from.bwlimit=${sourceUploadLimit}`);
-			} else {
-				// For restic source backends, the download from source becomes an upload limit
-				args.push("--limit-upload", sourceUploadLimit);
-			}
-		}
+	const sourceUploadLimit = formatBandwidthLimit(sourceConfig.uploadLimit);
+	const sourceDownloadLimit = formatBandwidthLimit(sourceConfig.downloadLimit);
+
+	// Determine effective limit for source (pick smaller numeric value if both exist)
+	let effectiveLimit = "";
+	if (sourceUploadLimit && sourceDownloadLimit) {
+		effectiveLimit = parseInt(sourceUploadLimit) < parseInt(sourceDownloadLimit) ? sourceUploadLimit : sourceDownloadLimit;
+	} else if (sourceUploadLimit) {
+		effectiveLimit = sourceUploadLimit;
+	} else if (sourceDownloadLimit) {
+		effectiveLimit = sourceDownloadLimit;
 	}
 
-	if (sourceConfig.downloadLimit?.enabled) {
-		const sourceDownloadLimit = formatBandwidthLimit(sourceConfig.downloadLimit);
-		if (sourceDownloadLimit) {
-			if (sourceConfig.backend === "rclone") {
-				// For rclone source backends
-				const sourceUploadLimit = sourceConfig.uploadLimit?.enabled ? formatBandwidthLimit(sourceConfig.uploadLimit) : "";
-				const effectiveLimit = sourceUploadLimit && parseInt(sourceUploadLimit) < parseInt(sourceDownloadLimit) ? sourceUploadLimit : sourceDownloadLimit;
-				args.push("-o", `rclone.from.bwlimit=${effectiveLimit}`);
-			} else {
-				// For restic source backends, this affects reading from the source repo
-				args.push("--limit-download", sourceDownloadLimit);
-			}
+	if (sourceConfig.backend === "rclone") {
+		// For rclone source backends, use single consolidated bwlimit
+		if (effectiveLimit) {
+			args.push("-o", `rclone.from.bwlimit=${effectiveLimit}`);
+		}
+	} else {
+		// For restic source backends, apply individual limits
+		if (sourceConfig.uploadLimit?.enabled && sourceUploadLimit) {
+			args.push("--limit-upload", sourceUploadLimit);
+		}
+		if (sourceConfig.downloadLimit?.enabled && sourceDownloadLimit) {
+			args.push("--limit-download", sourceDownloadLimit);
 		}
 	}
 
@@ -915,8 +915,8 @@ const formatBandwidthLimit = (limit: BandwidthLimit): string => {
 	let kibibytesPerSecond: number;
 	switch (limit.unit) {
 		case "Kbps":
-			// Kilobits per second to KiB/s: divide by 8 (bits to bytes), then by 1024 (bytes to KiB)
-			kibibytesPerSecond = limit.value / (8 * 1024);
+			// Kilobits per second to KiB/s: kilobits→bits→bytes→KiB
+			kibibytesPerSecond = (limit.value * 1000) / 8 / 1024;
 			break;
 		case "Mbps":
 			// Megabits per second to KiB/s: multiply by 1000000 (Mb to bits), divide by 8 (bits to bytes), then by 1024 (bytes to KiB)
@@ -951,32 +951,36 @@ export const addCommonArgs = (args: string[], env: Record<string, string>, confi
 
 	// Add bandwidth limits if configuration is provided
 	if (config) {
-		// Handle upload limit
-		if (config.uploadLimit?.enabled) {
+		if (config.backend === "rclone") {
+			// For rclone backends, consolidate both upload and download limits into one bwlimit
 			const uploadLimit = formatBandwidthLimit(config.uploadLimit);
-			if (uploadLimit) {
-				if (config.backend === "rclone") {
-					// For rclone backends, use --bwlimit
-					args.push("-o", `rclone.bwlimit=${uploadLimit}`);
-				} else {
-					// For restic backends, use --limit-upload
+			const downloadLimit = formatBandwidthLimit(config.downloadLimit);
+
+			// Determine effective limit (choose more restrictive when both exist)
+			let effectiveLimit = "";
+			if (uploadLimit && downloadLimit) {
+				effectiveLimit = parseInt(uploadLimit) < parseInt(downloadLimit) ? uploadLimit : downloadLimit;
+			} else if (uploadLimit) {
+				effectiveLimit = uploadLimit;
+			} else if (downloadLimit) {
+				effectiveLimit = downloadLimit;
+			}
+
+			if (effectiveLimit) {
+				args.push("-o", `rclone.bwlimit=${effectiveLimit}`);
+			}
+		} else {
+			// For restic backends, handle upload and download limits separately
+			if (config.uploadLimit?.enabled) {
+				const uploadLimit = formatBandwidthLimit(config.uploadLimit);
+				if (uploadLimit) {
 					args.push("--limit-upload", uploadLimit);
 				}
 			}
-		}
 
-		// Handle download limit
-		if (config.downloadLimit?.enabled) {
-			const downloadLimit = formatBandwidthLimit(config.downloadLimit);
-			if (downloadLimit) {
-				if (config.backend === "rclone") {
-					// For rclone, bwlimit affects both upload and download
-					// If both limits are set, use the more restrictive one
-					const uploadLimit = config.uploadLimit?.enabled ? formatBandwidthLimit(config.uploadLimit) : "";
-					const effectiveLimit = uploadLimit && parseInt(uploadLimit) < parseInt(downloadLimit) ? uploadLimit : downloadLimit;
-					args.push("-o", `rclone.bwlimit=${effectiveLimit}`);
-				} else {
-					// For restic backends, use --limit-download
+			if (config.downloadLimit?.enabled) {
+				const downloadLimit = formatBandwidthLimit(config.downloadLimit);
+				if (downloadLimit) {
 					args.push("--limit-download", downloadLimit);
 				}
 			}
@@ -1009,7 +1013,7 @@ const cleanupTemporaryKeys = async (env: Record<string, string>) => {
 		if (env[key]) {
 			try {
 				await fs.unlink(env[key]);
-			} catch (error) {
+			} catch (_error) {
 				// Ignore errors when cleaning up temporary files
 			}
 		}
@@ -1019,7 +1023,7 @@ const cleanupTemporaryKeys = async (env: Record<string, string>) => {
 	if (env.RESTIC_PASSWORD_FILE && env.RESTIC_PASSWORD_FILE !== RESTIC_PASS_FILE) {
 		try {
 			await fs.unlink(env.RESTIC_PASSWORD_FILE);
-		} catch (error) {
+		} catch (_error) {
 			// Ignore errors when cleaning up temporary files
 		}
 	}

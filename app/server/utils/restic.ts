@@ -736,15 +736,20 @@ const ls = async (config: RepositoryConfig, snapshotId: string, organizationId: 
 	return { snapshot, nodes };
 };
 
-const unlock = async (config: RepositoryConfig, organizationId: string) => {
+const unlock = async (config: RepositoryConfig, options: { signal?: AbortSignal; organizationId: string }) => {
 	const repoUrl = buildRepoUrl(config);
-	const env = await buildEnv(config, organizationId);
+	const env = await buildEnv(config, options.organizationId);
 
 	const args = ["unlock", "--repo", repoUrl, "--remove-all"];
 	addCommonArgs(args, env, config);
 
-	const res = await exec({ command: "restic", args, env });
+	const res = await exec({ command: "restic", args, env, signal: options?.signal });
 	await cleanupTemporaryKeys(env);
+
+	if (options?.signal?.aborted) {
+		logger.warn("Restic unlock was aborted by signal.");
+		return { success: false, message: "Operation aborted" };
+	}
 
 	if (res.exitCode !== 0) {
 		logger.error(`Restic unlock failed: ${res.stderr}`);
@@ -755,7 +760,10 @@ const unlock = async (config: RepositoryConfig, organizationId: string) => {
 	return { success: true, message: "Repository unlocked successfully" };
 };
 
-const check = async (config: RepositoryConfig, options: { readData?: boolean; organizationId: string }) => {
+const check = async (
+	config: RepositoryConfig,
+	options: { readData?: boolean; signal?: AbortSignal; organizationId: string },
+) => {
 	const repoUrl = buildRepoUrl(config);
 	const env = await buildEnv(config, options.organizationId);
 
@@ -767,8 +775,13 @@ const check = async (config: RepositoryConfig, options: { readData?: boolean; or
 
 	addCommonArgs(args, env, config);
 
-	const res = await exec({ command: "restic", args, env });
+	const res = await exec({ command: "restic", args, env, signal: options?.signal });
 	await cleanupTemporaryKeys(env);
+
+	if (options?.signal?.aborted) {
+		logger.warn("Restic check was aborted by signal.");
+		return { success: false, hasErrors: true, output: "", error: "Operation aborted" };
+	}
 
 	const { stdout, stderr } = res;
 
@@ -793,15 +806,20 @@ const check = async (config: RepositoryConfig, options: { readData?: boolean; or
 	};
 };
 
-const repairIndex = async (config: RepositoryConfig, organizationId: string) => {
+const repairIndex = async (config: RepositoryConfig, options: { signal?: AbortSignal; organizationId: string }) => {
 	const repoUrl = buildRepoUrl(config);
-	const env = await buildEnv(config, organizationId);
+	const env = await buildEnv(config, options.organizationId);
 
 	const args = ["repair", "index", "--repo", repoUrl];
 	addCommonArgs(args, env, config);
 
-	const res = await exec({ command: "restic", args, env });
+	const res = await exec({ command: "restic", args, env, signal: options?.signal });
 	await cleanupTemporaryKeys(env);
+
+	if (options?.signal?.aborted) {
+		logger.warn("Restic repair index was aborted by signal.");
+		return { success: false, message: "Operation aborted", output: "" };
+	}
 
 	const { stdout, stderr } = res;
 
